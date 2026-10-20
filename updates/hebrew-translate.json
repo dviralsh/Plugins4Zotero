@@ -3,8 +3,8 @@
     "hebrew-translate@plugins4zotero": {
       "updates": [
         {
-          "version": "0.1.2",
-          "update_link": "https://github.com/dviralsh/Plugins4Zotero/releases/download/hebrew-translate-0.1.2/hebrew-translate-0.1.2.xpi",
+          "version": "0.2.0",
+          "update_link": "https://github.com/dviralsh/Plugins4Zotero/releases/download/hebrew-translate-0.2.0/hebrew-translate-0.2.0.xpi",
           "applications": {
             "zotero": {
               "strict_min_version": "6.999"

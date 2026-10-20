@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Hebrew Translate",
-  "version": "0.1.2",
-  "description": "Adds a Hebrew translation as the comment of text annotations (highlights/underlines) created in the PDF reader.",
+  "version": "0.2.0",
+  "description": "Shows a Hebrew translation when you select text in the PDF reader, and stores it as the comment of new highlights/underlines.",
   "author": "Plugins4Zotero contributors",
   "applications": {
     "zotero": {
