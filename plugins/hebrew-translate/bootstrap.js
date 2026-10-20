@@ -3,7 +3,6 @@
 
 const PREF_MAX_WORDS = "extensions.plugins4zotero.hebrewtranslate.maxWords";
 const TARGET_LANG = "iw"; // Google Translate code for Hebrew
-const FRESH_MS = 30 * 1000; // only translate annotations created just now
 const TEXT_TYPES = ["highlight", "underline"];
 
 let observerID = null;
@@ -50,8 +49,10 @@ async function handleItem(id) {
 	if (item.annotationComment) return;
 	if (inFlight.has(id)) return;
 
-	const added = Zotero.Date.sqlToDate(item.dateAdded, true);
-	if (!added || Date.now() - added.getTime() > FRESH_MS) return; // e.g. synced
+	// Annotations created locally are unsynced until the next upload; ones that
+	// arrive from another device are saved by the sync engine already marked synced.
+	if (item.synced) return;
+	if (Zotero.Sync.Runner && Zotero.Sync.Runner.syncInProgress) return;
 
 	const text = (item.annotationText || "").trim();
 	if (!text) return;
