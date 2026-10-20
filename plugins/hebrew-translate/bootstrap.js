@@ -14,7 +14,7 @@ const cache = new Map(); // text -> translation, avoids repeat requests / rate l
 function install() {}
 function uninstall() {}
 
-async function startup() {
+async function startup({ rootURI }) {
 	await Zotero.initializationPromise;
 	if (Zotero.Prefs.get(PREF_MAX_WORDS, true) === undefined) {
 		Zotero.Prefs.set(PREF_MAX_WORDS, 5, true);
@@ -37,10 +37,16 @@ async function startup() {
 		"hebrew-translate"
 	);
 	Zotero.Reader.registerEventListener("renderTextSelectionPopup", onSelectionPopup, PLUGIN_ID);
+
+	Services.scriptloader.loadSubScript(rootURI + "summary.js");
+	Zotero.Reader.registerEventListener("createViewContextMenu", Summary.onViewContextMenu, PLUGIN_ID);
 }
 
 function shutdown() {
 	Zotero.Reader.unregisterEventListener("renderTextSelectionPopup", onSelectionPopup);
+	if (typeof Summary !== "undefined") {
+		Zotero.Reader.unregisterEventListener("createViewContextMenu", Summary.onViewContextMenu);
+	}
 	if (observerID) {
 		Zotero.Notifier.unregisterObserver(observerID);
 		observerID = null;
