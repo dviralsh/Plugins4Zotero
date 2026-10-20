@@ -6,4 +6,4 @@ When you create a **highlight** or **underline** annotation in Zotero's PDF read
 - Annotations that already have a comment, or that were synced from another device, are left alone.
 - Translation uses the public Google Translate web endpoint (no API key). **The selected text is sent to Google.** The endpoint is unofficial and may change or rate-limit.
 
-Requires Zotero 7. Build with `scripts/build.sh hebrew-translate`, then install the `.xpi` via *Tools → Plugins → ⚙ → Install Plugin From File*.
+Requires Zotero 7 or newer. Build with `scripts/build.sh hebrew-translate`, then install the `.xpi` via *Tools → Plugins → ⚙ → Install Plugin From File*.
