@@ -1,14 +1,15 @@
 {
   "manifest_version": 2,
   "name": "Hebrew Translate",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Adds a Hebrew translation as the comment of text annotations (highlights/underlines) created in the PDF reader.",
   "author": "Plugins4Zotero contributors",
   "applications": {
     "zotero": {
       "id": "hebrew-translate@plugins4zotero",
-      "strict_min_version": "7.0",
-      "strict_max_version": "99.*"
+      "strict_min_version": "6.999",
+      "strict_max_version": "99.*",
+      "update_url": "https://raw.githubusercontent.com/dviralsh/Plugins4Zotero/main/updates/hebrew-translate.json"
     }
   }
 }
