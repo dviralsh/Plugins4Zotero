@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Hebrew Translate",
-  "version": "0.2.0",
-  "description": "Shows a Hebrew translation when you select text in the PDF reader, and stores it as the comment of new highlights/underlines.",
+  "version": "0.3.0",
+  "description": "Reader tools: Hebrew translation of selected text / new highlights, and a local AI summary of the paper via Ollama.",
   "author": "Plugins4Zotero contributors",
   "applications": {
     "zotero": {
