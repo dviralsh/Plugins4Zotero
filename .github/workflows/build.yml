@@ -1,0 +1,72 @@
+name: Build plugins
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.build.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build every plugin under plugins/
+        id: build
+        run: |
+          set -euo pipefail
+          list=""
+          for dir in plugins/*/; do
+            name=$(basename "$dir")
+            [ -f "$dir/manifest.json" ] || continue
+            ./scripts/build.sh "$name"
+            list="$list $name"
+          done
+          ls -l dist
+          echo "plugins=$list" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugins-xpi
+          path: dist/*.xpi
+          if-no-files-found: error
+
+  release:
+    # Only publish after a merge to main, never for PR builds.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugins-xpi
+          path: dist
+
+      - name: Publish a release per plugin version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for xpi in dist/*.xpi; do
+            base=$(basename "$xpi" .xpi)        # <plugin>-<version>
+            tag="$base"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "Release $tag already exists - bump the version in manifest.json to publish a new one."
+              continue
+            fi
+            gh release create "$tag" "$xpi" \
+              --target "$GITHUB_SHA" \
+              --title "$base" \
+              --notes "Install via Zotero: Tools → Plugins → ⚙ → Install Plugin From File. Use at your own risk - see the README disclaimer."
+          done
