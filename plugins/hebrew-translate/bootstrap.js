@@ -5,8 +5,11 @@ const PREF_MAX_WORDS = "extensions.plugins4zotero.hebrewtranslate.maxWords";
 const TARGET_LANG = "iw"; // Google Translate code for Hebrew
 const TEXT_TYPES = ["highlight", "underline"];
 
+const PLUGIN_ID = "hebrew-translate@plugins4zotero";
+
 let observerID = null;
 const inFlight = new Set();
+const cache = new Map(); // text -> translation, avoids repeat requests / rate limits
 
 function install() {}
 function uninstall() {}
@@ -33,13 +36,39 @@ async function startup() {
 		["item"],
 		"hebrew-translate"
 	);
+	Zotero.Reader.registerEventListener("renderTextSelectionPopup", onSelectionPopup, PLUGIN_ID);
 }
 
 function shutdown() {
+	Zotero.Reader.unregisterEventListener("renderTextSelectionPopup", onSelectionPopup);
 	if (observerID) {
 		Zotero.Notifier.unregisterObserver(observerID);
 		observerID = null;
 	}
+}
+
+// Shows the translation inside the popup that appears when text is selected,
+// before (and without) creating any highlight.
+function onSelectionPopup(event) {
+	const { doc, append, params } = event;
+	const text = (params.annotation && params.annotation.text || "").trim();
+	if (!text || text.split(/\s+/).length > getMaxWords()) return;
+
+	const box = doc.createElement("div");
+	box.setAttribute("dir", "rtl");
+	box.style.cssText = "padding:6px 8px;max-width:320px;font-size:14px;user-select:text;";
+	box.textContent = cache.get(text) || "…";
+	append(box);
+
+	if (!cache.has(text)) {
+		translate(text)
+			.then((t) => { if (t) box.textContent = t; else box.remove(); })
+			.catch((e) => { Zotero.logError(e); box.remove(); });
+	}
+}
+
+function getMaxWords() {
+	return Zotero.Prefs.get(PREF_MAX_WORDS, true) || 5;
 }
 
 async function handleItem(id) {
@@ -56,8 +85,7 @@ async function handleItem(id) {
 
 	const text = (item.annotationText || "").trim();
 	if (!text) return;
-	const maxWords = Zotero.Prefs.get(PREF_MAX_WORDS, true) || 5;
-	if (text.split(/\s+/).length > maxWords) return;
+	if (text.split(/\s+/).length > getMaxWords()) return;
 
 	inFlight.add(id);
 	try {
@@ -73,15 +101,43 @@ async function handleItem(id) {
 	}
 }
 
-// Uses the public, key-less Google Translate web endpoint.
+// Uses public, key-less endpoints. Google's web endpoint rate-limits (HTTP 429),
+// so fall back to a second Google endpoint, then to MyMemory.
 async function translate(text) {
-	const url = "https://translate.googleapis.com/translate_a/single?client=gtx"
-		+ "&sl=auto&tl=" + TARGET_LANG + "&dt=t&q=" + encodeURIComponent(text);
-	const req = await Zotero.HTTP.request("GET", url, {
-		responseType: "json",
-		timeout: 10000,
-	});
-	const segments = req.response && req.response[0];
-	if (!Array.isArray(segments)) return null;
-	return segments.map(s => s[0]).join("").trim();
+	if (cache.has(text)) return cache.get(text);
+	const q = encodeURIComponent(text);
+	const attempts = [
+		async () => {
+			const r = await request("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl="
+				+ TARGET_LANG + "&dt=t&q=" + q);
+			return r[0].map(seg => seg[0]).join("");
+		},
+		async () => {
+			const r = await request("https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl="
+				+ TARGET_LANG + "&q=" + q);
+			return Array.isArray(r[0]) ? r[0][0] : r[0];
+		},
+		async () => {
+			const r = await request("https://api.mymemory.translated.net/get?q=" + q + "&langpair=Autodetect|he");
+			return r.responseData.translatedText;
+		},
+	];
+	for (const attempt of attempts) {
+		try {
+			const result = ((await attempt()) || "").trim();
+			if (result) {
+				cache.set(text, result);
+				return result;
+			}
+		}
+		catch (e) {
+			Zotero.debug("[hebrew-translate] endpoint failed: " + e);
+		}
+	}
+	return null;
+}
+
+async function request(url) {
+	const req = await Zotero.HTTP.request("GET", url, { responseType: "json", timeout: 10000 });
+	return req.response;
 }
