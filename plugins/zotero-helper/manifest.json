@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "ZoteroHelper",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Reader tools: Hebrew translation of selected text / new highlights, and a local AI summary of the paper via Ollama.",
   "author": "Plugins4Zotero contributors",
   "applications": {

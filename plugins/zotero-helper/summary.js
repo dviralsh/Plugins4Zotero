@@ -59,6 +59,14 @@ var Summary = {
 		return req.response;
 	},
 
+	// Ollama explains failures in the response body ({"error": "..."}).
+	errorText(e) {
+		const r = e && e.xmlhttp && (e.xmlhttp.response || e.xmlhttp.responseText);
+		let msg = r && (r.error || (typeof r === "string" && r)) || "";
+		if (typeof msg !== "string") msg = JSON.stringify(msg);
+		return msg || String(e && e.message || e);
+	},
+
 	// Returns the installed model names, or null if Ollama can't be reached.
 	async listModels() {
 		try {
@@ -69,6 +77,21 @@ var Summary = {
 			Zotero.debug("[zoterohelper] Ollama not reachable: " + e);
 			return null;
 		}
+	},
+
+	// Drops models that can't generate text (e.g. embedding models). Older Ollama
+	// versions don't report capabilities; those models are kept.
+	async generativeModels(names) {
+		const keep = [];
+		for (const name of names) {
+			try {
+				const info = await Summary.ollama("/api/show", { model: name });
+				if (Array.isArray(info.capabilities) && !info.capabilities.includes("completion")) continue;
+			}
+			catch (e) { /* keep it */ }
+			keep.push(name);
+		}
+		return keep;
 	},
 
 	pickModel(installed) {
@@ -97,9 +120,19 @@ var Summary = {
 		}
 		catch (e) {
 			if (e && e.status === 0) throw e; // server vanished: not a GPU problem
+			if (e && e.status >= 400 && e.status < 500) {
+				// Bad request / unknown or non-generative model: CPU won't help.
+				throw new Error("Ollama rejected the request (HTTP " + e.status + ") for model \"" + model
+					+ "\": " + Summary.errorText(e));
+			}
 			Zotero.debug("[zoterohelper] GPU run failed, retrying on CPU: " + e);
-			const r = await Summary.ollama("/api/generate", payload({ num_gpu: 0 }), TEN_MIN);
-			return { text: r.response, device: "CPU (GPU attempt failed)" };
+			try {
+				const r = await Summary.ollama("/api/generate", payload({ num_gpu: 0 }), TEN_MIN);
+				return { text: r.response, device: "CPU (GPU attempt failed)" };
+			}
+			catch (e2) {
+				throw new Error("Ollama failed on GPU and CPU for model \"" + model + "\": " + Summary.errorText(e2));
+			}
 		}
 	},
 
@@ -123,7 +156,8 @@ var Summary = {
 		const attachment = Zotero.Items.get(attachmentID);
 		if (!attachment) return;
 
-		const models = await Summary.listModels();
+		let models = await Summary.listModels();
+		if (models !== null) models = await Summary.generativeModels(models);
 		if (models === null) {
 			Summary.alert(
 				"Ollama is not available",
