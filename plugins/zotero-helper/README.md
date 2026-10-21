@@ -1,4 +1,4 @@
-# Hebrew Translate
+# ZoteroHelper
 
 Three things in Zotero's PDF reader:
 
@@ -12,4 +12,4 @@ Three things in Zotero's PDF reader:
 - Only short selections are translated (default: up to 5 words). Change the limit via the hidden pref `extensions.plugins4zotero.hebrewtranslate.maxWords` in the Config Editor.
 - Translation uses public, key-less web endpoints (Google Translate, with fallbacks). **The selected text is sent to these services.** They are unofficial and may change or rate-limit (HTTP 429); results are cached to reduce requests.
 
-Requires Zotero 7 or newer. Build with `scripts/build.sh hebrew-translate`, then install the `.xpi` via *Tools → Plugins → ⚙ → Install Plugin From File*.
+Requires Zotero 7 or newer. Build with `scripts/build.sh zotero-helper`, then install the `.xpi` via *Tools → Plugins → ⚙ → Install Plugin From File*.
