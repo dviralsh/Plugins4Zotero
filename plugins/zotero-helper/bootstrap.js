@@ -5,7 +5,7 @@ const PREF_MAX_WORDS = "extensions.plugins4zotero.hebrewtranslate.maxWords";
 const TARGET_LANG = "iw"; // Google Translate code for Hebrew
 const TEXT_TYPES = ["highlight", "underline"];
 
-const PLUGIN_ID = "hebrew-translate@plugins4zotero";
+const PLUGIN_ID = "zoterohelper@plugins4zotero";
 
 let observerID = null;
 const inFlight = new Set();
@@ -34,12 +34,19 @@ async function startup({ rootURI }) {
 			},
 		},
 		["item"],
-		"hebrew-translate"
+		"zoterohelper"
 	);
 	Zotero.Reader.registerEventListener("renderTextSelectionPopup", onSelectionPopup, PLUGIN_ID);
 
-	Services.scriptloader.loadSubScript(rootURI + "summary.js");
-	Zotero.Reader.registerEventListener("createViewContextMenu", Summary.onViewContextMenu, PLUGIN_ID);
+	// Isolated so a problem here can never break the translation features above.
+	try {
+		Services.scriptloader.loadSubScript(rootURI + "summary.js");
+		Zotero.Reader.registerEventListener("createViewContextMenu", Summary.onViewContextMenu, PLUGIN_ID);
+		Zotero.debug("[zoterohelper] AI summary menu registered");
+	}
+	catch (e) {
+		Zotero.logError(e);
+	}
 }
 
 function shutdown() {
@@ -137,7 +144,7 @@ async function translate(text) {
 			}
 		}
 		catch (e) {
-			Zotero.debug("[hebrew-translate] endpoint failed: " + e);
+			Zotero.debug("[zoterohelper] endpoint failed: " + e);
 		}
 	}
 	return null;

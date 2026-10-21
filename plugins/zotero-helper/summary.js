@@ -66,7 +66,7 @@ var Summary = {
 			return (r.models || []).map(m => m.name);
 		}
 		catch (e) {
-			Zotero.debug("[hebrew-translate] Ollama not reachable: " + e);
+			Zotero.debug("[zoterohelper] Ollama not reachable: " + e);
 			return null;
 		}
 	},
@@ -97,7 +97,7 @@ var Summary = {
 		}
 		catch (e) {
 			if (e && e.status === 0) throw e; // server vanished: not a GPU problem
-			Zotero.debug("[hebrew-translate] GPU run failed, retrying on CPU: " + e);
+			Zotero.debug("[zoterohelper] GPU run failed, retrying on CPU: " + e);
 			const r = await Summary.ollama("/api/generate", payload({ num_gpu: 0 }), TEN_MIN);
 			return { text: r.response, device: "CPU (GPU attempt failed)" };
 		}

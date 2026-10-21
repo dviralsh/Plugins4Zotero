@@ -70,3 +70,36 @@ jobs:
               --title "$base" \
               --notes "Install via Zotero: Tools → Plugins → ⚙ → Install Plugin From File. Use at your own risk - see the README disclaimer."
           done
+
+      # Zotero's built-in updater reads this per-plugin manifest (the plugin's
+      # update_url points here), so installed copies update themselves.
+      - name: Publish update manifests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p updates
+          for xpi in dist/*.xpi; do
+            base=$(basename "$xpi" .xpi)
+            plugin="${base%-*}"
+            version="${base##*-}"
+            python3 - "$plugin" "$version" "$base" <<'PY'
+          import json, os, sys
+          plugin, version, base = sys.argv[1:4]
+          m = json.load(open(f"plugins/{plugin}/manifest.json"))
+          z = m["applications"]["zotero"]
+          link = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{base}/{base}.xpi"
+          out = {"addons": {z["id"]: {"updates": [{
+              "version": version,
+              "update_link": link,
+              "applications": {"zotero": {"strict_min_version": z["strict_min_version"]}},
+          }]}}}
+          json.dump(out, open(f"updates/{plugin}.json", "w"), indent=2)
+          PY
+          done
+          if ! gh release view updates >/dev/null 2>&1; then
+            gh release create updates --prerelease --target "$GITHUB_SHA" \
+              --title "Update manifests" \
+              --notes "Machine-readable files Zotero uses to auto-update plugins. Not an install package."
+          fi
+          gh release upload updates updates/*.json --clobber
