@@ -9,9 +9,14 @@ var Summary = {
 	PREF_HOST: "extensions.plugins4zotero.hebrewtranslate.ollamaHost",
 	PREF_MODEL: "extensions.plugins4zotero.hebrewtranslate.ollamaModel",
 	PREF_MAX_CHARS: "extensions.plugins4zotero.hebrewtranslate.summaryMaxChars",
+	PREF_AUTOSTART: "extensions.plugins4zotero.hebrewtranslate.ollamaAutoStart",
+	PREF_IGPU: "extensions.plugins4zotero.hebrewtranslate.ollamaIntegratedGPU",
+	PREF_EXE: "extensions.plugins4zotero.hebrewtranslate.ollamaPath",
 	DEFAULT_HOST: "http://localhost:11434",
 	SUGGESTED_MODEL: "llama3.2",
 	running: new Set(),
+	server: null, // the `ollama serve` process we started, if any
+	serverLog: "",
 
 	getPref(name, fallback) {
 		const v = Zotero.Prefs.get(name, true);
@@ -149,6 +154,94 @@ var Summary = {
 		}
 	},
 
+
+	// ---- starting `ollama serve` ourselves --------------------------------
+
+	isLocalHost(url) {
+		try {
+			return ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname);
+		}
+		catch (e) {
+			return false;
+		}
+	},
+
+	async findOllamaExe() {
+		const custom = Summary.getPref(Summary.PREF_EXE, "");
+		if (custom) return custom;
+		const { Subprocess } = ChromeUtils.importESModule("resource://gre/modules/Subprocess.sys.mjs");
+		for (const name of ["ollama.exe", "ollama"]) {
+			try {
+				return await Subprocess.pathSearch(name);
+			}
+			catch (e) { /* not on PATH */ }
+		}
+		const local = Services.env.get("LOCALAPPDATA");
+		const candidates = [
+			local && local + "\\Programs\\Ollama\\ollama.exe",
+			"/usr/local/bin/ollama",
+			"/opt/homebrew/bin/ollama",
+			"/usr/bin/ollama",
+			"/Applications/Ollama.app/Contents/Resources/ollama",
+		].filter(Boolean);
+		for (const c of candidates) {
+			if (await IOUtils.exists(c)) return c;
+		}
+		return null;
+	},
+
+	// Starts `ollama serve` on the configured local host/port and waits for it.
+	// Returns true once the server answers. The process is stopped by stopServer().
+	async startServer() {
+		const host = String(Summary.getPref(Summary.PREF_HOST, Summary.DEFAULT_HOST));
+		if (!Summary.isLocalHost(host)) return false;
+		const exe = await Summary.findOllamaExe();
+		if (!exe) return false;
+
+		const url = new URL(host);
+		const env = { OLLAMA_HOST: url.hostname.replace(/[\[\]]/g, "") + ":" + (url.port || "11434") };
+		if (Summary.getPref(Summary.PREF_IGPU, false)) {
+			env.OLLAMA_VULKAN = "1";
+			env.OLLAMA_IGPU_ENABLE = "1";
+		}
+		const { Subprocess } = ChromeUtils.importESModule("resource://gre/modules/Subprocess.sys.mjs");
+		Summary.serverLog = "";
+		const proc = await Subprocess.call({
+			command: exe,
+			arguments: ["serve"],
+			environment: env,
+			environmentAppend: true,
+			stderr: "stdout",
+		});
+		Summary.server = proc;
+		// The pipe must be drained or the server blocks once it fills up.
+		(async () => {
+			try {
+				let chunk;
+				while ((chunk = await proc.stdout.readString())) {
+					Summary.serverLog = (Summary.serverLog + chunk).slice(-3000);
+				}
+			}
+			catch (e) { /* process ended */ }
+		})();
+
+		for (let i = 0; i < 40; i++) { // up to ~20 s
+			if (await Summary.listModels() !== null) return true;
+			await Zotero.Promise.delay(500);
+		}
+		return false;
+	},
+
+	async stopServer() {
+		const proc = Summary.server;
+		Summary.server = null;
+		if (!proc) return;
+		try {
+			await proc.kill();
+		}
+		catch (e) { /* already gone */ }
+	},
+
 	// ---- main flow --------------------------------------------------------
 
 	async run(attachmentID) {
@@ -157,6 +250,18 @@ var Summary = {
 		if (!attachment) return;
 
 		let models = await Summary.listModels();
+		if (models === null && Summary.getPref(Summary.PREF_AUTOSTART, true)) {
+			const pw0 = Summary.progress("AI summary", "Starting Ollama…");
+			try {
+				if (await Summary.startServer()) models = await Summary.listModels();
+			}
+			catch (e) {
+				Zotero.logError(e);
+			}
+			finally {
+				pw0.close();
+			}
+		}
 		if (models !== null) models = await Summary.generativeModels(models);
 		if (models === null) {
 			Summary.alert(
@@ -164,6 +269,8 @@ var Summary = {
 				"Could not reach Ollama at " + Summary.getPref(Summary.PREF_HOST, Summary.DEFAULT_HOST)
 				+ ".\n\nInstall it from https://ollama.com, start it, and pull a model "
 				+ "(for example: ollama pull " + Summary.SUGGESTED_MODEL + "), then try again."
+				+ (Summary.serverLog ? "\n\nI tried to start it automatically; its output ended with:\n"
+					+ Summary.serverLog.slice(-600) : "")
 			);
 			return;
 		}
