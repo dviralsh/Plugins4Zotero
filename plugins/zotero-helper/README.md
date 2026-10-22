@@ -6,6 +6,8 @@ Three things in Zotero's PDF reader:
 2. **Translation saved on highlights.** When you create a **highlight** or **underline**, the Hebrew translation is stored as the annotation's comment (unless it already has a comment or was synced from another device).
 3. **AI summary (local, via Ollama).** Right-click inside the PDF and choose **AI summary of this paper (Ollama)**. The paper's text is sent to your own local [Ollama](https://ollama.com) server and the summary is saved as a child note (tagged `ai-summary`) of the item.
    - Ollama uses the GPU automatically when it can; if that attempt fails the plugin retries on CPU only. The note says which device was used.
+   - **Auto-start:** if Ollama isn't running and the host is local, the plugin runs `ollama serve` itself on that host/port, waits for it, and stops it when Zotero closes (it never stops a server it didn't start). Set `...ollamaAutoStart` to `false` to disable. The executable is found on `PATH` or in the usual install locations; override with `...ollamaPath`.
+   - **Intel/integrated GPU:** set `...ollamaIntegratedGPU` to `true` to start the server with `OLLAMA_VULKAN=1` and `OLLAMA_IGPU_ENABLE=1`. Combine with `...ollamaHost` = `http://127.0.0.1:11555` to keep it separate from a normal Ollama on port 11434.
    - If Ollama isn't reachable, or no model is installed, a message tells you what to do (e.g. `ollama pull llama3.2`).
    - Prefs (Config Editor): `extensions.plugins4zotero.hebrewtranslate.ollamaModel` (default: first installed chat model), `...ollamaHost` (default `http://localhost:11434`), `...summaryMaxChars` (default 24000 — longer papers are truncated).
 

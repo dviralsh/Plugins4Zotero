@@ -53,6 +53,7 @@ function shutdown() {
 	Zotero.Reader.unregisterEventListener("renderTextSelectionPopup", onSelectionPopup);
 	if (typeof Summary !== "undefined") {
 		Zotero.Reader.unregisterEventListener("createViewContextMenu", Summary.onViewContextMenu);
+		Summary.stopServer(); // only the server this plugin started itself
 	}
 	if (observerID) {
 		Zotero.Notifier.unregisterObserver(observerID);
