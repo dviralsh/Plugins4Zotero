@@ -38,7 +38,20 @@ async function startup({ rootURI }) {
 	);
 	Zotero.Reader.registerEventListener("renderTextSelectionPopup", onSelectionPopup, PLUGIN_ID);
 
-	// Isolated so a problem here can never break the translation features above.
+	// Each feature is isolated so a problem in one can never break the others.
+	try {
+		Services.scriptloader.loadSubScript(rootURI + "linkdup.js");
+		LinkDup.init();
+		Zotero.PreferencePanes.register({
+			pluginID: PLUGIN_ID,
+			src: rootURI + "prefs.xhtml",
+			label: "ZoteroHelper",
+		});
+	}
+	catch (e) {
+		Zotero.logError(e);
+	}
+
 	try {
 		Services.scriptloader.loadSubScript(rootURI + "summary.js");
 		Zotero.Reader.registerEventListener("createViewContextMenu", Summary.onViewContextMenu, PLUGIN_ID);
@@ -50,6 +63,7 @@ async function startup({ rootURI }) {
 }
 
 function shutdown() {
+	if (typeof LinkDup !== "undefined") LinkDup.shutdown();
 	Zotero.Reader.unregisterEventListener("renderTextSelectionPopup", onSelectionPopup);
 	if (typeof Summary !== "undefined") {
 		Zotero.Reader.unregisterEventListener("createViewContextMenu", Summary.onViewContextMenu);

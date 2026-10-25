@@ -1,6 +1,6 @@
 # ZoteroHelper
 
-Three things in Zotero's PDF reader:
+Features:
 
 1. **Instant translation on selection.** Select text with the mouse and the Hebrew translation appears in the popup next to your selection — no highlight needed.
 2. **Translation saved on highlights.** When you create a **highlight** or **underline**, the Hebrew translation is stored as the annotation's comment (unless it already has a comment or was synced from another device).
@@ -15,3 +15,23 @@ Three things in Zotero's PDF reader:
 - Translation uses public, key-less web endpoints (Google Translate, with fallbacks). **The selected text is sent to these services.** They are unofficial and may change or rate-limit (HTTP 429); results are cached to reduce requests.
 
 Requires Zotero 7 or newer. Build with `scripts/build.sh zotero-helper`, then install the `.xpi` via *Tools → Plugins → ⚙ → Install Plugin From File*.
+
+## Link instead of duplicate
+
+When you add an item that already exists in the same library (browser connector, import, "Add item by identifier", drag-and-drop, manual entry), the plugin does **not** keep the new copy. Instead the *existing* item is added to the collection(s) the new item was saved to (in Zotero one item can live in many collections) and the new copy goes to the Trash. A notification appears with an **Undo** button.
+
+**How a duplicate is recognised** (first hit wins; only items in the same library, never the Trash by default):
+1. DOI (case-insensitive, URL prefix ignored; also read from *Extra*)
+2. ISBN (ISBN-10 and ISBN-13 are treated as equal)
+3. arXiv ID, PMID, URL (tracking parameters and bare domains ignored)
+4. Fallback: normalized title (case, punctuation, accents ignored) **and** first author's last name **and** year must all agree. Titles under 8 characters never match.
+
+If several items match, the oldest (lowest *Date Added*) is used. Items of different types (e.g. preprint vs. journal article) are not linked unless you enable that. Standalone attachments and notes, synced items, and read-only libraries are never touched.
+
+**What is carried over** from the new copy to the existing item (never overwriting fields): tags, child notes, child attachments (unless an equivalent PDF/note is already there) and related-item links. Attachments that a connector saves a moment *after* the item are moved too.
+
+**Settings** (Settings → ZoteroHelper): enable/disable; matching strictness (identifiers only, or identifiers + title/author/year); what to do with the new copy (Trash, delete permanently, ask); merge tags/notes/attachments on/off; notification on/off; match across item types; what to do when the existing item is in the Trash (don't deduplicate, or restore it); what to do when the duplicate was added with no collection selected (Trash it or leave it alone).
+
+Note: Zotero's own **Duplicate Item** command also creates a new item, so it is treated like any other add. Turn the feature off (or choose "Ask") if you use it.
+
+Run the tests with `node --test tests/*.test.mjs` (Node 22+).
