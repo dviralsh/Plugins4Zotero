@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 22
       - name: Unit tests
-        run: node --test tests/
+        run: node --test tests/*.test.mjs
 
   build:
     runs-on: ubuntu-latest

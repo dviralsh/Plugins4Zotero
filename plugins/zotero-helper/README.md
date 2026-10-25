@@ -34,4 +34,4 @@ If several items match, the oldest (lowest *Date Added*) is used. Items of diffe
 
 Note: Zotero's own **Duplicate Item** command also creates a new item, so it is treated like any other add. Turn the feature off (or choose "Ask") if you use it.
 
-Run the tests with `node --test tests/` (Node 22+).
+Run the tests with `node --test tests/*.test.mjs` (Node 22+).
