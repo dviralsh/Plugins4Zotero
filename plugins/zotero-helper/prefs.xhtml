@@ -1,0 +1,73 @@
+<vbox id="zoterohelper-prefs" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+	xmlns:html="http://www.w3.org/1999/xhtml">
+	<groupbox>
+		<label><html:h2>Link instead of duplicate</html:h2></label>
+		<description>
+			When you add an item that already exists in your library, the existing item is added to the
+			target collection and the new copy is removed. Only items in the same library are compared.
+		</description>
+
+		<checkbox id="zoterohelper-linkdup-enabled"
+			preference="extensions.plugins4zotero.linkdup.enabled"
+			label="Enable &quot;Link instead of duplicate&quot;"/>
+
+		<hbox align="center">
+			<label value="Matching:"/>
+			<menulist preference="extensions.plugins4zotero.linkdup.strictness">
+				<menupopup>
+					<menuitem label="Identifiers only (DOI, ISBN, arXiv, PMID, URL)" value="identifiers"/>
+					<menuitem label="Identifiers, then title + first author + year" value="identifiers+title"/>
+				</menupopup>
+			</menulist>
+		</hbox>
+
+		<hbox align="center">
+			<label value="New copy:"/>
+			<menulist preference="extensions.plugins4zotero.linkdup.newCopyAction">
+				<menupopup>
+					<menuitem label="Move to Trash (recoverable)" value="trash"/>
+					<menuitem label="Delete permanently (no Undo)" value="delete"/>
+					<menuitem label="Ask each time" value="ask"/>
+				</menupopup>
+			</menulist>
+		</hbox>
+
+		<checkbox preference="extensions.plugins4zotero.linkdup.mergeChildren"
+			label="Move tags, notes, attachments and related items onto the existing item"/>
+		<checkbox preference="extensions.plugins4zotero.linkdup.notify"
+			label="Show a notification (with Undo)"/>
+		<checkbox preference="extensions.plugins4zotero.linkdup.allowCrossType"
+			label="Also match items of different types (e.g. preprint vs. journal article)"/>
+
+		<hbox align="center">
+			<label value="Existing item is in the Trash:"/>
+			<menulist preference="extensions.plugins4zotero.linkdup.trashedExisting">
+				<menupopup>
+					<menuitem label="Don't deduplicate (keep the new item)" value="skip"/>
+					<menuitem label="Restore it and use it" value="restore"/>
+				</menupopup>
+			</menulist>
+		</hbox>
+
+		<hbox align="center">
+			<label value="Duplicate added to My Library (no collection):"/>
+			<menulist preference="extensions.plugins4zotero.linkdup.noCollectionAction">
+				<menupopup>
+					<menuitem label="Move the new copy to the Trash" value="trash"/>
+					<menuitem label="Leave it alone" value="keep"/>
+				</menupopup>
+			</menulist>
+		</hbox>
+	</groupbox>
+
+	<preferences>
+		<preference id="extensions.plugins4zotero.linkdup.enabled" name="extensions.plugins4zotero.linkdup.enabled" type="bool"/>
+		<preference id="extensions.plugins4zotero.linkdup.strictness" name="extensions.plugins4zotero.linkdup.strictness" type="string"/>
+		<preference id="extensions.plugins4zotero.linkdup.newCopyAction" name="extensions.plugins4zotero.linkdup.newCopyAction" type="string"/>
+		<preference id="extensions.plugins4zotero.linkdup.mergeChildren" name="extensions.plugins4zotero.linkdup.mergeChildren" type="bool"/>
+		<preference id="extensions.plugins4zotero.linkdup.notify" name="extensions.plugins4zotero.linkdup.notify" type="bool"/>
+		<preference id="extensions.plugins4zotero.linkdup.allowCrossType" name="extensions.plugins4zotero.linkdup.allowCrossType" type="bool"/>
+		<preference id="extensions.plugins4zotero.linkdup.trashedExisting" name="extensions.plugins4zotero.linkdup.trashedExisting" type="string"/>
+		<preference id="extensions.plugins4zotero.linkdup.noCollectionAction" name="extensions.plugins4zotero.linkdup.noCollectionAction" type="string"/>
+	</preferences>
+</vbox>

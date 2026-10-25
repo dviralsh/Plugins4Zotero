@@ -11,6 +11,16 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test tests/
+
   build:
     runs-on: ubuntu-latest
     outputs:
@@ -41,7 +51,7 @@ jobs:
   release:
     # Only publish after a merge to main, never for PR builds.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: build
+    needs: [test, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
